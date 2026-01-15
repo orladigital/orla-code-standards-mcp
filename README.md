@@ -80,7 +80,3 @@ Contribuições são bem-vindas! Ao propor mudanças:
 ## 📞 Contato
 
 Para dúvidas ou sugestões sobre os padrões, entre em contato com a equipe de engenharia ou abra uma issue neste repositório.
-
----
-
-**Última atualização:** 2024
