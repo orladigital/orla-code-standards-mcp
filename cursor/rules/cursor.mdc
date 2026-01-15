@@ -7,16 +7,16 @@ Este arquivo define como a IA (Cursor) deve interpretar e aplicar as diretrizes 
 As regras de engenharia NÃO estão definidas neste arquivo.
 Elas estão distribuídas nos documentos abaixo e devem ser interpretadas de forma complementar:
 
-- `core/principles.md`
-- `core/general-guidelines.md`
-- `core/solid.md`
-- `core/kiss.md`
-- `core/dry.md`
-- `core/yagni.md`
+- `cursor/rules/principles.mdc`
+- `cursor/rules/general-guidelines.mdc`
+- `cursor/rules/solid.mdc`
+- `cursor/rules/kiss.mdc`
+- `cursor/rules/dry.mdc`
+- `cursor/rules/yagni.mdc`
 
 Em caso de conflito, prevalece a seguinte ordem:
-1. `core/principles.md`
-2. `core/general-guidelines.md`
+1. `cursor/rules/principles.mdc`
+2. `cursor/rules/general-guidelines.mdc`
 3. Princípios específicos (SOLID, KISS, DRY, YAGNI)
 
 ---
@@ -41,7 +41,7 @@ A IA deve atuar como um **revisor crítico e pragmático**, não como um gerador
 
 Durante code reviews, a IA deve:
 
-- Avaliar aderência às diretrizes descritas nos arquivos de `core/`
+- Avaliar aderência às diretrizes descritas nos arquivos de `cursor/rules/`
 - Sinalizar violações de forma **objetiva e justificável**
 - Sempre que possível, sugerir **alternativas mais simples**
 - Aceitar pequenas duplicações quando elas reduzirem a carga cognitiva
@@ -53,7 +53,7 @@ Durante code reviews, a IA deve:
 
 A IA **não deve**:
 
-- Introduzir padrões arquiteturais não previstos nos documentos de `core/`
+- Introduzir padrões arquiteturais não previstos nos documentos de `cursor/rules/`
 - Propor generalizações sem evidência de necessidade real
 - Otimizar código prematuramente
 - Reescrever código apenas por estilo pessoal
