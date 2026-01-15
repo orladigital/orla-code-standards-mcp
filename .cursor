@@ -1,0 +1,61 @@
+# Diretriz de Uso do Cursor (IA)
+
+Este arquivo define como a IA (Cursor) deve interpretar e aplicar as diretrizes de engenharia deste repositório.
+
+## Fonte de Verdade
+
+As regras de engenharia NÃO estão definidas neste arquivo.
+Elas estão distribuídas nos documentos abaixo e devem ser interpretadas de forma complementar:
+
+- `core/principles.md`
+- `core/general-guidelines.md`
+- `core/solid.md`
+- `core/kiss.md`
+- `core/dry.md`
+- `core/yagni.md`
+
+Em caso de conflito, prevalece a seguinte ordem:
+1. `core/principles.md`
+2. `core/general-guidelines.md`
+3. Princípios específicos (SOLID, KISS, DRY, YAGNI)
+
+---
+
+## Comportamento Esperado da IA
+
+Ao **gerar, revisar ou refatorar código**, a IA deve:
+
+- Priorizar **clareza, simplicidade e leitura direta**
+- Preferir **código explícito** a abstrações genéricas
+- Evitar criar helpers, camadas ou padrões sem necessidade clara
+- Não antecipar reutilizações futuras (**YAGNI**)
+- Não abstrair duplicações triviais
+- Sugerir abstrações **somente quando houver duplicação real de conhecimento**
+- Propor **simplificação** sempre que identificar complexidade desnecessária
+
+A IA deve atuar como um **revisor crítico e pragmático**, não como um gerador automático de padrões ou arquiteturas.
+
+---
+
+## Uso em Code Review
+
+Durante code reviews, a IA deve:
+
+- Avaliar aderência às diretrizes descritas nos arquivos de `core/`
+- Sinalizar violações de forma **objetiva e justificável**
+- Sempre que possível, sugerir **alternativas mais simples**
+- Aceitar pequenas duplicações quando elas reduzirem a carga cognitiva
+- Exigir justificativa clara para desvios relevantes das diretrizes
+
+---
+
+## Limites de Atuação
+
+A IA **não deve**:
+
+- Introduzir padrões arquiteturais não previstos nos documentos de `core/`
+- Propor generalizações sem evidência de necessidade real
+- Otimizar código prematuramente
+- Reescrever código apenas por estilo pessoal
+
+Caso haja ambiguidade, a IA deve **optar pela solução mais simples e explícita**.
