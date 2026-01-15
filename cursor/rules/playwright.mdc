@@ -1,0 +1,377 @@
+---
+name: playwright
+description: Regras e padrões para escrita de testes E2E com Playwright neste projeto
+alwaysApply: false
+globs:
+  - "playwright/**/*.spec.js"
+  - "playwright/**/*.js"
+---
+
+# Padrões de Testes Playwright
+
+Este documento define os padrões e regras que devem ser seguidos ao escrever testes E2E com Playwright neste projeto.
+
+## Estrutura de Arquivos
+
+- Os testes devem estar na pasta `playwright/`
+- Organize os testes por funcionalidade/página em subpastas (ex: `playwright/debentures/`, `playwright/cri-cra/`)
+- Nomeie os arquivos de teste com sufixo `.spec.js` (ex: `caracteristicas.spec.js`)
+
+## Estrutura de Testes
+
+### Organização de Casos de Teste
+
+- Use `test.describe()` para agrupar testes relacionados
+- Use nomenclatura padronizada: `TC-XXX: Descrição do Teste` (ex: `TC-001: Carregamento da Página`)
+- Cada `test.describe()` deve conter um único `test()` que valida um cenário específico
+
+```javascript
+test.describe('TC-001: Carregamento da Página', () => {
+  test('deve carregar a página de características corretamente', async ({ page }) => {
+    // implementação do teste
+  });
+});
+```
+
+### Constantes e Valores
+
+- Defina constantes no topo do arquivo para valores reutilizáveis (tickers, paths, etc.)
+- Use nomes descritivos em UPPER_SNAKE_CASE para constantes
+
+```javascript
+const DEBENTURE_TICKER = 'AALM11';
+const DEBENTURE_PATH = `/debentures/${DEBENTURE_TICKER}/caracteristicas`;
+```
+
+## Interceptação de Erros e Requisições
+
+### Interceptação de Erros do Console
+
+Sempre intercepte e valide erros do console em testes de carregamento de página:
+
+```javascript
+const consoleErrors = [];
+page.on('console', (msg) => {
+  if (msg.type() === 'error') {
+    consoleErrors.push(msg.text());
+  }
+});
+
+// Ao final do teste, valide que não há erros
+expect(consoleErrors).toHaveLength(0);
+```
+
+### Interceptação de Requisições Falhadas
+
+Intercepte requisições que falharam, filtrando requisições não críticas (analytics, google, gtag):
+
+```javascript
+const failedRequests = [];
+page.on('requestfailed', (request) => {
+  failedRequests.push({
+    url: request.url(),
+    failure: request.failure()?.errorText,
+  });
+});
+
+// Validação ao final
+const criticalFailures = failedRequests.filter(
+  (req) =>
+    !req.url.includes('analytics') && 
+    !req.url.includes('google') && 
+    !req.url.includes('gtag'),
+);
+expect(criticalFailures).toHaveLength(0);
+```
+
+## Navegação e Carregamento
+
+### Uso de `page.goto()`
+
+- Sempre especifique `waitUntil` em `page.goto()`
+- Use `'load'` ou `'networkidle'` dependendo do caso
+- Para páginas com muitas requisições assíncronas, prefira `'networkidle'`
+
+```javascript
+await page.goto(DEBENTURE_PATH, { waitUntil: 'networkidle' });
+// ou
+await page.goto(DEBENTURE_PATH, { waitUntil: 'load' });
+```
+
+### Validação de URL e Título
+
+- Valide a URL após navegação usando `expect(page).toHaveURL()` com regex
+- Valide o título da página quando relevante
+
+```javascript
+await expect(page).toHaveURL(new RegExp(`${DEBENTURE_PATH}$`));
+await expect(page).toHaveTitle(new RegExp(`${DEBENTURE_TICKER}.*ANBIMA Data`, 'i'));
+```
+
+## Seletores e Locators
+
+### Preferência de Seletores
+
+1. **Seletores semânticos**: Use `page.getByRole()` quando possível
+2. **Locators com filtros**: Use `page.locator().filter({ hasText: ... })` para elementos por texto
+3. **IDs específicos**: Use IDs quando disponíveis (ex: `#output__container--vna`)
+4. **Seletores CSS**: Use apenas quando necessário e específico
+
+### Padrões de Locators
+
+```javascript
+// Preferir seletores semânticos
+const button = page.getByRole('button', { name: /Comparar debênture/i });
+
+// Locators com filtros de texto (case-insensitive)
+const breadcrumb = page.locator('nav').first();
+const homeLink = page.locator('nav a').filter({ hasText: 'HOME' });
+
+// IDs específicos quando disponíveis
+const vnaContainer = page.locator('#output__container--vna').first();
+
+// Múltiplos seletores com fallback
+const tooltipIcon = page.locator('#output__container--vna svg').first();
+```
+
+### Navegação entre Elementos
+
+Use `.locator('..')` para navegar para elementos pais quando necessário:
+
+```javascript
+const devedorValue = page
+  .locator('dt, term')
+  .filter({ hasText: 'Devedor' })
+  .locator('..')
+  .locator('dd, definition');
+```
+
+## Validações
+
+### Uso de `expect()` do Playwright
+
+- Use `expect()` do `@playwright/test`, não do Jest
+- Prefira asserções específicas do Playwright (`toBeVisible()`, `toHaveText()`, etc.)
+
+```javascript
+import { expect, test } from '@playwright/test';
+
+await expect(element).toBeVisible();
+await expect(element).toHaveText('Texto esperado');
+await expect(element).toContainText('Texto parcial');
+```
+
+### Timeouts
+
+- Especifique timeouts apenas quando necessário (elementos que podem demorar)
+- Use valores razoáveis (5000ms para elementos dinâmicos, 10000ms para carregamento inicial)
+
+```javascript
+await expect(mainHeading).toBeVisible({ timeout: 10000 });
+await expect(element).toBeVisible({ timeout: 5000 });
+```
+
+### Validações Condicionais
+
+Para elementos que podem ou não estar presentes, use `.catch()` ou verificação condicional:
+
+```javascript
+const errorMessages = page.locator('text=/erro|error|falha|não encontrado/i');
+await expect(errorMessages.first())
+  .not.toBeVisible({ timeout: 1000 })
+  .catch(() => {});
+
+// Ou verificação condicional
+const isVisible = await disclaimer.isVisible().catch(() => false);
+if (isVisible) {
+  // validação adicional
+}
+```
+
+## Ações Assíncronas
+
+### Uso de `Promise.all()`
+
+Use `Promise.all()` para ações que devem acontecer simultaneamente (navegação + clique):
+
+```javascript
+await Promise.all([
+  page.waitForURL(new RegExp('/debentures/?$'), { timeout: 30000 }),
+  homeLink.click(),
+]);
+```
+
+### Aguardar Estados
+
+Use `waitForLoadState()` após ações que causam navegação:
+
+```javascript
+await page.waitForLoadState('networkidle');
+```
+
+## Validações de Texto e Formato
+
+### Regex para Validações
+
+Use regex para validar formatos específicos:
+
+```javascript
+// CNPJ
+expect(cnpjText).toMatch(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
+
+// Valores monetários
+expect(volumeText).toMatch(/R\$\s*[\d.,]+/);
+
+// Datas
+expect(dataText).toMatch(/\d{2}\/\d{2}\/\d{4}/);
+
+// URLs
+expect(href).toMatch(/^https:\/\/data\.cer\.anbima\.cloud\/?$/);
+```
+
+### Validações de Conteúdo
+
+- Valide que textos não estão vazios: `expect(text.trim()).not.toBe('')`
+- Valide que textos existem: `expect(text).toBeTruthy()`
+- Use `.textContent()` para obter o texto completo
+
+```javascript
+const text = await element.textContent();
+expect(text).toBeTruthy();
+expect(text?.trim()).not.toBe('');
+```
+
+## Interações com Elementos
+
+### Cliques e Navegação
+
+- Sempre aguarde a navegação após cliques em links
+- Use `Promise.all()` para combinar clique e espera de URL
+
+```javascript
+await Promise.all([
+  page.waitForURL(new RegExp('/documentos$'), { timeout: 30000 }),
+  documentosTab.click(),
+]);
+```
+
+### Hover e Tooltips
+
+Para testar tooltips, use hover e aguarde um pequeno delay:
+
+```javascript
+await tooltipIcon.hover();
+await page.waitForTimeout(500);
+const tooltip = page.locator('[role="tooltip"]');
+await expect(tooltip).toBeVisible();
+```
+
+### Abas e Contextos
+
+Para testar abertura de novas abas:
+
+```javascript
+const [newPage] = await Promise.all([
+  context.waitForEvent('page'),
+  compareButton.click(),
+]);
+await newPage.waitForLoadState('networkidle');
+await expect(newPage).toHaveURL(expectedUrl);
+await newPage.close();
+```
+
+## Comentários e Documentação
+
+### Comentários Explicativos
+
+- Adicione comentários em português para explicar lógicas complexas
+- Comente seletores específicos quando necessário
+
+```javascript
+// Intercepta erros do console para validação
+const consoleErrors = [];
+
+// Seletor: #output__container--vna > span > span > span > svg
+const tooltipIcon = page.locator('#output__container--vna svg').first();
+```
+
+## Boas Práticas
+
+### 1. Testes Independentes
+
+- Cada teste deve ser independente e poder rodar isoladamente
+- Não dependa da ordem de execução dos testes
+
+### 2. Nomes Descritivos
+
+- Use nomes de teste descritivos em português
+- Descreva o comportamento esperado: `'deve exibir título e informações principais corretamente'`
+
+### 3. Validações Específicas
+
+- Valide comportamentos específicos, não apenas que elementos existem
+- Valide estados, textos, formatos, navegação
+
+### 4. Tratamento de Elementos Opcionais
+
+- Use verificações condicionais para elementos que podem não estar presentes
+- Não falhe o teste se elementos opcionais não existirem
+
+### 5. Performance
+
+- Evite `page.waitForTimeout()` desnecessários
+- Use `waitForLoadState()` ou `waitForURL()` quando possível
+- Use timeouts apropriados para não tornar testes lentos
+
+### 6. Manutenibilidade
+
+- Use constantes para valores que podem mudar
+- Organize testes em grupos lógicos com `test.describe()`
+- Mantenha testes focados em um único comportamento
+
+## Exemplo Completo
+
+```javascript
+import { expect, test } from '@playwright/test';
+
+const DEBENTURE_TICKER = 'AALM11';
+const DEBENTURE_PATH = `/debentures/${DEBENTURE_TICKER}/caracteristicas`;
+
+test.describe('TC-001: Carregamento da Página', () => {
+  test('deve carregar a página de características corretamente', async ({ page }) => {
+    // Intercepta erros do console para validação
+    const consoleErrors = [];
+    page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+
+    // Intercepta requisições que falharam
+    const failedRequests = [];
+    page.on('requestfailed', (request) => {
+      failedRequests.push({
+        url: request.url(),
+        failure: request.failure()?.errorText,
+      });
+    });
+
+    await page.goto(DEBENTURE_PATH, { waitUntil: 'networkidle' });
+
+    await expect(page).toHaveURL(new RegExp(`${DEBENTURE_PATH}$`));
+    await expect(page).toHaveTitle(new RegExp(`${DEBENTURE_TICKER}.*ANBIMA Data`, 'i'));
+    expect(consoleErrors).toHaveLength(0);
+
+    const mainHeading = page.locator('h1').filter({ hasText: DEBENTURE_TICKER });
+    await expect(mainHeading).toBeVisible({ timeout: 10000 });
+
+    const criticalFailures = failedRequests.filter(
+      (req) =>
+        !req.url.includes('analytics') && 
+        !req.url.includes('google') && 
+        !req.url.includes('gtag'),
+    );
+    expect(criticalFailures).toHaveLength(0);
+  });
+});
+```
