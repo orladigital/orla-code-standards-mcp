@@ -46,6 +46,9 @@ Durante code reviews, a IA deve:
 - Sempre que possível, sugerir **alternativas mais simples**
 - Aceitar pequenas duplicações quando elas reduzirem a carga cognitiva
 - Exigir justificativa clara para desvios relevantes das diretrizes
+- **NÃO modificar o código revisado** - apenas apontar problemas e sugerir melhorias
+- **NÃO adicionar comentários desnecessários** - comentários devem explicar "por quê", não "o quê"
+- **NÃO fazer alterações não solicitadas** - limitar-se a revisar e reportar
 
 ---
 

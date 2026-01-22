@@ -30,6 +30,7 @@ Este documento contém diretrizes gerais que complementam os princípios especí
 - Mantenha testes simples e legíveis
 - Teste comportamentos, não implementações
 - Priorize testes de integração sobre testes unitários quando apropriado
+- Evite comentários explicativos em testes - o código e o nome do teste devem ser auto-explicativos
 
 ### Documentação
 - Documente APIs públicas
