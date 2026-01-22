@@ -80,3 +80,46 @@ Contribuições são bem-vindas! Ao propor mudanças:
 ## 📞 Contato
 
 Para dúvidas ou sugestões sobre os padrões, entre em contato com a equipe de engenharia ou abra uma issue neste repositório.
+
+## ⚙️ Como instalar no Cursor
+
+### Passo 1: Instalar as regras via Remote Rule
+
+No Cursor, vá em:
+```
+Cursor > Settings > Cursor Settings > Rules and Commands > Project Rules > Remote Rule (github)
+```
+
+Cole a URL do repositório:
+```
+https://github.com/orladigital/orla-code-standards-mcp.git
+```
+
+### Passo 2: Localizar os arquivos baixados
+
+O Cursor salvará automaticamente as regras em:
+```
+/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/
+```
+
+### Passo 3: Configurar o arquivo .cursorrules
+
+1. **Copie o arquivo** [`.cursorrules`](./.cursorrules) deste projeto para a raiz do seu projeto
+2. **Edite os caminhos** no arquivo copiado, substituindo `/Users/seu_usuario/.cursor/projects/seu_projeto` pelo caminho real onde as regras foram baixadas na sua máquina
+
+### Passo 4: Personalizar (opcional)
+
+O arquivo [`.cursorrules`](./.cursorrules) pode conter qualquer instrução adicional que você queira que o Cursor execute automaticamente, como:
+- Ler arquivos de regras específicos
+- Executar comandos personalizados
+- Aplicar configurações específicas do projeto
+
+### Passo 5: Escolher o escopo
+
+**Opção A - Por projeto:** Mantenha o arquivo `.cursorrules` na raiz de cada projeto
+
+**Opção B - Global:** Copie o conteúdo do arquivo e cole em:
+```
+Cursor > Settings > Cursor Settings > Rules and Commands > User Rules
+```
+
