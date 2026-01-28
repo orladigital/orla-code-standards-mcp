@@ -2,35 +2,47 @@
 
 ## Orla Code Standards
 
+**Detecção automática do projeto**: O diretório de regras será identificado baseado no workspace atual (`$PWD`)
+
 Antes de gerar, revisar ou refatorar código, **sempre**:
 
 1. **Atualize as regras** executando:
 
    ```bash
-   git -C /Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp pull
+   git -C $HOME/.cursor/projects/$(echo "$PWD" | sed 's|^/||' | sed 's|/|-|g')/skills/orla-code-standards-mcp pull
    ```
 
-2. **Leia os arquivos de regras** (em ordem de prioridade):
-
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/principles.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/general-guidelines.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/solid.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/kiss.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/dry.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/yagni.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/cursor.mdc`
-   - `/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/cursor/rules/playwright.mdc` _(apenas para arquivos em `playwright/\*\*/_.spec.js`)\*
+2. **Leia os arquivos de regras** localizados em:
+   
+   `$HOME/.cursor/projects/$(echo "$PWD" | sed 's|^/||' | sed 's|/|-|g')/skills/orla-code-standards-mcp/cursor/rules/`
+   
+   Na ordem: `principles.mdc` → `general-guidelines.mdc` → `solid.mdc` → `kiss.mdc` → `dry.mdc` → `yagni.mdc` → `cursor.mdc`
 
 3. **Aplique as regras** conforme descrito nos arquivos lidos.
 
 
+## CONVENTIONAL COMMITS
+
+### Formato Obrigatório
+```
+type(context): #issue-number - mensagem descritiva
+```
+
+### Types Permitidos
+`feat` | `fix` | `chore` | `docs` | `style` | `refactor` | `test` | `perf` | `build` | `ci`
+
+### Regras
+- Máximo: **150 caracteres**
+- Issue: **obrigatório** (formato `#12345`)
+- Context: **opcional** (ex: `indices`, `auth`, `deps`)
+
+### Exemplos Válidos
+```bash
+feat(indices): #45269 - adiciona endpoint de consulta de índices
+fix(auth): #12345 - corrige validação de token JWT
+chore(deps): #67890 - atualiza dependências de segurança
+refactor(service): #22222 - simplifica lógica de mapeamento
+```
 
 ## OUTRAS REGRAS ADICIONAIS
 
-## Linting (JS/TS)
-
-Ao trabalhar com código JavaScript/TypeScript, detecte automaticamente o linter usado no projeto (Biome, ESLint ou Oxlint) verificando arquivos de configuração, e consulte as regras do Ultracite MCP quando apropriado.
-
-## Documentação de Bibliotecas
-
-Quando tiver dúvidas sobre APIs, uso ou configuração de bibliotecas/frameworks, consulte o **MCP do Context7** para obter documentação atualizada e exemplos de código.
