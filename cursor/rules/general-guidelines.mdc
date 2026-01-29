@@ -31,6 +31,9 @@ Este documento contém diretrizes gerais que complementam os princípios especí
 - Teste comportamentos, não implementações
 - Priorize testes de integração sobre testes unitários quando apropriado
 - Evite comentários explicativos em testes - o código e o nome do teste devem ser auto-explicativos
+- **Os nomes dos testes devem seguir o padrão BDD "Dado...Quando...Então"** - descreva o teste com formato "Dado [contexto], Quando [ação], Então [resultado esperado]"
+- **Evite testes redundantes** - se um teste cobre completamente outro (incluindo todas as validações), remova o teste redundante
+- **Cada teste deve validar um comportamento único** - não crie múltiplos testes que validam o mesmo comportamento com apenas variações de dados
 
 ### Documentação
 - Documente APIs públicas
