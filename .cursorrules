@@ -16,33 +16,10 @@ Antes de gerar, revisar ou refatorar código, **sempre**:
    
    `$HOME/.cursor/projects/$(echo "$PWD" | sed 's|^/||' | sed 's|/|-|g')/skills/orla-code-standards-mcp/cursor/rules/`
    
-   Na ordem: `principles.mdc` → `general-guidelines.mdc` → `solid.mdc` → `kiss.mdc` → `dry.mdc` → `yagni.mdc` → `cursor.mdc`
+   Na ordem: `principles.mdc` → `general-guidelines.mdc` → `solid.mdc` → `kiss.mdc` → `dry.mdc` → `yagni.mdc` → `conventional-commits.mdc` → `cursor.mdc`
 
 3. **Aplique as regras** conforme descrito nos arquivos lidos.
 
-
-## CONVENTIONAL COMMITS
-
-### Formato Obrigatório
-```
-type(context): #issue-number - mensagem descritiva
-```
-
-### Types Permitidos
-`feat` | `fix` | `chore` | `docs` | `style` | `refactor` | `test` | `perf` | `build` | `ci`
-
-### Regras
-- Máximo: **150 caracteres**
-- Issue: **obrigatório** (formato `#12345`)
-- Context: **opcional** (ex: `indices`, `auth`, `deps`)
-
-### Exemplos Válidos
-```bash
-feat(indices): #45269 - adiciona endpoint de consulta de índices
-fix(auth): #12345 - corrige validação de token JWT
-chore(deps): #67890 - atualiza dependências de segurança
-refactor(service): #22222 - simplifica lógica de mapeamento
-```
 
 ## OUTRAS REGRAS ADICIONAIS
 
