@@ -17,34 +17,48 @@ Estabelecer uma base comum de conhecimento e práticas que:
 ## 📚 Estrutura
 
 ```
-├── core/
-│   ├── principles.md          # Princípios universais de engenharia
-│   ├── solid.md               # SOLID aplicado de forma prática
-│   ├── kiss.md                # Simplicidade acima de abstração
-│   ├── dry.md                 # Reuso consciente (sem overengineering)
-│   ├── yagni.md               # Evitar código sem demanda real
-│   └── general-guidelines.md  # Diretrizes gerais
+├── cursor/
+│   └── rules/
+│       ├── principles.mdc              # Princípios universais de engenharia
+│       ├── general-guidelines.mdc      # Diretrizes gerais
+│       ├── solid.mdc                   # SOLID aplicado de forma prática
+│       ├── kiss.mdc                    # Simplicidade acima de abstração
+│       ├── dry.mdc                     # Reuso consciente (sem overengineering)
+│       ├── yagni.mdc                   # Evitar código sem demanda real
+│       ├── conventional-commits.mdc    # Padrão de commits
+│       ├── playwright.mdc              # Diretrizes de testes E2E
+│       └── cursor.mdc                  # Configurações específicas do Cursor
+└── .cursorrules                        # Instruções para o Cursor Agent
 ```
 
 ## 📖 Documentos
 
-### [Princípios Universais](./core/principles.md)
+### [Princípios Universais](./cursor/rules/principles.mdc)
 Princípios fundamentais que guiam todas as decisões de engenharia na organização, incluindo qualidade, simplicidade, manutenibilidade e colaboração.
 
-### [SOLID](./core/solid.md)
+### [Diretrizes Gerais](./cursor/rules/general-guidelines.mdc)
+Diretrizes gerais sobre estrutura de código, qualidade, processo de desenvolvimento, performance, segurança e trabalho em equipe.
+
+### [SOLID](./cursor/rules/solid.mdc)
 Aplicação prática dos cinco princípios SOLID (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion) com exemplos e quando aplicá-los.
 
-### [KISS](./core/kiss.md)
+### [KISS](./cursor/rules/kiss.mdc)
 Keep It Simple, Stupid - Diretrizes sobre quando escolher simplicidade sobre abstração complexa, com exemplos práticos.
 
-### [DRY](./core/dry.md)
+### [DRY](./cursor/rules/dry.mdc)
 Don't Repeat Yourself - Aplicação consciente do princípio DRY, evitando overengineering e entendendo quando a duplicação é aceitável.
 
-### [YAGNI](./core/yagni.md)
+### [YAGNI](./cursor/rules/yagni.mdc)
 You Aren't Gonna Need It - Princípio que enfatiza não implementar funcionalidades até que sejam realmente necessárias.
 
-### [Diretrizes Gerais](./core/general-guidelines.md)
-Diretrizes gerais sobre estrutura de código, qualidade, processo de desenvolvimento, performance, segurança e trabalho em equipe.
+### [Conventional Commits](./cursor/rules/conventional-commits.mdc)
+Padrão de commits da organização com formato obrigatório, types permitidos e exemplos de uso.
+
+### [Playwright](./cursor/rules/playwright.mdc)
+Diretrizes e boas práticas para testes E2E utilizando Playwright.
+
+### [Cursor](./cursor/rules/cursor.mdc)
+Configurações e diretrizes específicas para uso do Cursor IDE.
 
 ## 🚀 Como Usar
 
@@ -99,13 +113,16 @@ https://github.com/orladigital/orla-code-standards-mcp.git
 
 O Cursor salvará automaticamente as regras em:
 ```
-/Users/seu_usuario/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/
+~/.cursor/projects/seu_projeto/skills/orla-code-standards-mcp/
 ```
 
 ### Passo 3: Configurar o arquivo .cursorrules
 
 1. **Copie o arquivo** [`.cursorrules`](./.cursorrules) deste projeto para a raiz do seu projeto
-2. **Edite os caminhos** no arquivo copiado, substituindo `/Users/seu_usuario/.cursor/projects/seu_projeto` pelo caminho real onde as regras foram baixadas na sua máquina
+2. **Pronto!** O arquivo usa detecção automática de projeto baseada no `$PWD`, não precisa editar caminhos manualmente
+
+O Cursor Agent lerá automaticamente as regras na seguinte ordem:
+- `principles.mdc` → `general-guidelines.mdc` → `solid.mdc` → `kiss.mdc` → `dry.mdc` → `yagni.mdc` → `conventional-commits.mdc` → `cursor.mdc`
 
 ### Passo 4: Personalizar (opcional)
 
@@ -123,8 +140,14 @@ O arquivo [`.cursorrules`](./.cursorrules) pode conter qualquer instrução adic
 Cursor > Settings > Cursor Settings > Rules and Commands > User Rules
 ```
 
-### Passo 5: Valide se funcionou
+### Passo 6: Valide se funcionou
 
 - Abra qualquer projeto no Cursor
 - Abra o chat
-- Digite: "Quais são as diretrizes de código da Orla Code Standards?"A IA deve mencionar SOLID, KISS, DRY, YAGNI e as diretrizes da Orla Digital
+- Digite: "Quais são as diretrizes de código da Orla Code Standards?"
+
+A IA deve mencionar:
+- Princípios universais
+- SOLID, KISS, DRY, YAGNI
+- Conventional Commits
+- Diretrizes gerais da Orla
