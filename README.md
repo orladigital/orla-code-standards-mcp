@@ -123,3 +123,8 @@ O arquivo [`.cursorrules`](./.cursorrules) pode conter qualquer instrução adic
 Cursor > Settings > Cursor Settings > Rules and Commands > User Rules
 ```
 
+### Passo 5: Valide se funcionou
+
+- Abra qualquer projeto no Cursor
+- Abra o chat
+- Digite: "Quais são as diretrizes de código da Orla Code Standards?"A IA deve mencionar SOLID, KISS, DRY, YAGNI e as diretrizes da Orla Digital
