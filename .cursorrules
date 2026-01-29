@@ -8,9 +8,16 @@ Antes de gerar, revisar ou refatorar código, **sempre**:
 
 1. **Atualize as regras** executando:
 
-   ```bash
-   git -C $HOME/.cursor/projects/$(echo "$PWD" | sed 's|^/||' | sed 's|/|-|g')/skills/orla-code-standards-mcp pull
-   ```
+      # Define o caminho do diretório
+      SKILLS_DIR="$HOME/.cursor/projects/$(echo "$PWD" | sed 's|^/||' | sed 's|/|-|g')/skills/orla-code-standards-mcp"
+      
+      # Se o diretório existe, atualiza; senão, clona
+      if [ -d "$SKILLS_DIR" ]; then
+      git -C "$SKILLS_DIR" pull
+      else
+      mkdir -p "$(dirname "$SKILLS_DIR")"
+      git clone git@github.com:orladigital/orla-code-standards-mcp.git "$SKILLS_DIR"
+      fi
 
 2. **Leia os arquivos de regras** localizados em:
    
