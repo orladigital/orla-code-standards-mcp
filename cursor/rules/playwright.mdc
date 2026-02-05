@@ -1,377 +1,819 @@
 ---
 name: playwright
-description: Regras e padrões para escrita de testes E2E com Playwright neste projeto
+description: Regras e padrões para escrita de testes E2E com Playwright utilizando Page Object Model (POM)
 alwaysApply: false
 globs:
   - "playwright/**/*.spec.js"
   - "playwright/**/*.js"
+  - "playwright/**/*.page.js"
+  - "playwright/**/*.component.js"
 ---
 
-# Padrões de Testes Playwright
+# Padrões de Testes Playwright com Page Object Model
 
-Este documento define os padrões e regras que devem ser seguidos ao escrever testes E2E com Playwright neste projeto.
+Este documento define os padrões e regras que devem ser seguidos ao escrever testes E2E com Playwright utilizando o padrão **Page Object Model (POM)**.
 
 ## Estrutura de Arquivos
 
-- Os testes devem estar na pasta `playwright/`
-- Organize os testes por funcionalidade/página em subpastas (ex: `playwright/debentures/`, `playwright/cri-cra/`)
-- Nomeie os arquivos de teste com sufixo `.spec.js` (ex: `caracteristicas.spec.js`)
+### Organização de Pastas
 
-## Estrutura de Testes
-
-### Organização de Casos de Teste
-
-- Use `test.describe()` para agrupar testes relacionados
-- Use nomenclatura padronizada: `TC-XXX: Descrição do Teste` (ex: `TC-001: Carregamento da Página`)
-- Cada `test.describe()` deve conter um único `test()` que valida um cenário específico
-
-```javascript
-test.describe('TC-001: Carregamento da Página', () => {
-  test('deve carregar a página de características corretamente', async ({ page }) => {
-    // implementação do teste
-  });
-});
+```
+playwright/
+├── pages/              # Page Objects
+│   ├── base.page.js    # Classe base para todos os Page Objects
+│   ├── debentures/
+│   │   ├── caracteristicas.page.js
+│   │   └── documentos.page.js
+│   └── cri-cra/
+│       └── listagem.page.js
+├── components/         # Component Objects (elementos reutilizáveis)
+│   ├── navigation.component.js
+│   ├── breadcrumb.component.js
+│   └── tooltip.component.js
+├── fixtures/           # Custom fixtures do Playwright
+│   └── test-data.js
+├── utils/              # Utilitários e helpers
+│   └── validators.js
+└── tests/              # Arquivos de teste (.spec.js)
+    ├── debentures/
+    │   └── caracteristicas.spec.js
+    └── cri-cra/
+        └── listagem.spec.js
 ```
 
-### Constantes e Valores
+### Convenções de Nomenclatura
 
-- Defina constantes no topo do arquivo para valores reutilizáveis (tickers, paths, etc.)
-- Use nomes descritivos em UPPER_SNAKE_CASE para constantes
+- **Page Objects**: `*.page.js` (ex: `caracteristicas.page.js`)
+- **Component Objects**: `*.component.js` (ex: `navigation.component.js`)
+- **Testes**: `*.spec.js` (ex: `caracteristicas.spec.js`)
+- **Fixtures**: `*.fixture.js` ou dentro de `fixtures/`
+- **Utils**: `*.util.js` ou dentro de `utils/`
+
+## Page Object Model (POM)
+
+### Princípios Fundamentais
+
+1. **Encapsulamento**: Cada Page Object encapsula seletores e ações de uma página/componente
+2. **Reutilização**: Page Objects são reutilizáveis entre múltiplos testes
+3. **Manutenibilidade**: Mudanças na UI são refletidas apenas no Page Object
+4. **Legibilidade**: Testes ficam mais legíveis e focados no comportamento, não em implementação
+
+### Estrutura de um Page Object
 
 ```javascript
-const DEBENTURE_TICKER = 'AALM11';
-const DEBENTURE_PATH = `/debentures/${DEBENTURE_TICKER}/caracteristicas`;
-```
+import { expect, Locator, Page } from '@playwright/test';
 
-## Interceptação de Erros e Requisições
-
-### Interceptação de Erros do Console
-
-Sempre intercepte e valide erros do console em testes de carregamento de página:
-
-```javascript
-const consoleErrors = [];
-page.on('console', (msg) => {
-  if (msg.type() === 'error') {
-    consoleErrors.push(msg.text());
+export class CaracteristicasPage {
+  readonly page: Page;
+  
+  // Locators - elementos da página
+  readonly mainHeading: Locator;
+  readonly vnaContainer: Locator;
+  readonly tooltipIcon: Locator;
+  readonly devedorValue: Locator;
+  readonly documentosTab: Locator;
+  readonly compareButton: Locator;
+  
+  constructor(page: Page) {
+    this.page = page;
+    
+    // Inicializar locators no construtor
+    this.mainHeading = page.locator('h1').first();
+    this.vnaContainer = page.locator('#output__container--vna').first();
+    this.tooltipIcon = this.vnaContainer.locator('svg').first();
+    this.devedorValue = page
+      .locator('dt, term')
+      .filter({ hasText: 'Devedor' })
+      .locator('..')
+      .locator('dd, definition');
+    this.documentosTab = page.getByRole('tab', { name: /documentos/i });
+    this.compareButton = page.getByRole('button', { name: /comparar debênture/i });
   }
-});
-
-// Ao final do teste, valide que não há erros
-expect(consoleErrors).toHaveLength(0);
+  
+  // Métodos de navegação
+  async goto(ticker: string) {
+    const path = `/debentures/${ticker}/caracteristicas`;
+    await this.page.goto(path, { waitUntil: 'networkidle' });
+    await this.waitForPageLoad();
+  }
+  
+  async waitForPageLoad() {
+    await expect(this.mainHeading).toBeVisible({ timeout: 10000 });
+  }
+  
+  // Métodos de interação
+  async clickDocumentosTab() {
+    await Promise.all([
+      this.page.waitForURL(new RegExp('/documentos$'), { timeout: 30000 }),
+      this.documentosTab.click(),
+    ]);
+  }
+  
+  async hoverTooltip() {
+    await this.tooltipIcon.hover();
+    await this.page.waitForTimeout(500);
+  }
+  
+  // Métodos de validação
+  async validateUrl(ticker: string) {
+    const expectedPath = `/debentures/${ticker}/caracteristicas`;
+    await expect(this.page).toHaveURL(new RegExp(`${expectedPath}$`));
+  }
+  
+  async validateTitle(ticker: string) {
+    await expect(this.page).toHaveTitle(
+      new RegExp(`${ticker}.*ANBIMA Data`, 'i')
+    );
+  }
+  
+  async getDevedorValue(): Promise<string | null> {
+    return await this.devedorValue.textContent();
+  }
+  
+  // Métodos de verificação de estado
+  async isTooltipVisible(): Promise<boolean> {
+    const tooltip = this.page.locator('[role="tooltip"]');
+    return await tooltip.isVisible().catch(() => false);
+  }
+}
 ```
 
-### Interceptação de Requisições Falhadas
+### Classe Base para Page Objects
 
-Intercepte requisições que falharam, filtrando requisições não críticas (analytics, google, gtag):
+Crie uma classe base para funcionalidades comuns:
 
 ```javascript
-const failedRequests = [];
-page.on('requestfailed', (request) => {
-  failedRequests.push({
-    url: request.url(),
-    failure: request.failure()?.errorText,
-  });
-});
+import { Page, expect } from '@playwright/test';
 
-// Validação ao final
-const criticalFailures = failedRequests.filter(
-  (req) =>
-    !req.url.includes('analytics') && 
-    !req.url.includes('google') && 
-    !req.url.includes('gtag'),
-);
-expect(criticalFailures).toHaveLength(0);
+export class BasePage {
+  readonly page: Page;
+  
+  constructor(page: Page) {
+    this.page = page;
+  }
+  
+  // Métodos comuns de navegação
+  async goto(url: string, options?: { waitUntil?: 'load' | 'networkidle' }) {
+    await this.page.goto(url, { 
+      waitUntil: options?.waitUntil || 'networkidle' 
+    });
+  }
+  
+  // Interceptação de erros do console
+  async setupConsoleErrorInterceptor() {
+    const consoleErrors: string[] = [];
+    this.page.on('console', (msg) => {
+      if (msg.type() === 'error') {
+        consoleErrors.push(msg.text());
+      }
+    });
+    return consoleErrors;
+  }
+  
+  // Interceptação de requisições falhadas
+  async setupFailedRequestInterceptor() {
+    const failedRequests: Array<{ url: string; failure?: string }> = [];
+    this.page.on('requestfailed', (request) => {
+      failedRequests.push({
+        url: request.url(),
+        failure: request.failure()?.errorText,
+      });
+    });
+    return failedRequests;
+  }
+  
+  // Validação de requisições críticas
+  validateCriticalRequests(failedRequests: Array<{ url: string }>) {
+    const criticalFailures = failedRequests.filter(
+      (req) =>
+        !req.url.includes('analytics') &&
+        !req.url.includes('google') &&
+        !req.url.includes('gtag')
+    );
+    expect(criticalFailures).toHaveLength(0);
+  }
+  
+  // Aguardar navegação
+  async waitForNavigation(urlPattern: RegExp, timeout = 30000) {
+    await this.page.waitForURL(urlPattern, { timeout });
+  }
+  
+  // Aguardar estado de carregamento
+  async waitForLoadState(state: 'load' | 'networkidle' = 'networkidle') {
+    await this.page.waitForLoadState(state);
+  }
+}
 ```
 
-## Navegação e Carregamento
-
-### Uso de `page.goto()`
-
-- Sempre especifique `waitUntil` em `page.goto()`
-- Use `'load'` ou `'networkidle'` dependendo do caso
-- Para páginas com muitas requisições assíncronas, prefira `'networkidle'`
+### Uso da Classe Base
 
 ```javascript
-await page.goto(DEBENTURE_PATH, { waitUntil: 'networkidle' });
-// ou
-await page.goto(DEBENTURE_PATH, { waitUntil: 'load' });
+import { Page } from '@playwright/test';
+import { BasePage } from '../base.page';
+
+export class CaracteristicasPage extends BasePage {
+  readonly mainHeading: Locator;
+  
+  constructor(page: Page) {
+    super(page);
+    this.mainHeading = page.locator('h1').first();
+  }
+  
+  async goto(ticker: string) {
+    await super.goto(`/debentures/${ticker}/caracteristicas`);
+  }
+}
 ```
 
-### Validação de URL e Título
+## Component Objects
 
-- Valide a URL após navegação usando `expect(page).toHaveURL()` com regex
-- Valide o título da página quando relevante
+Para elementos reutilizáveis que aparecem em múltiplas páginas:
 
 ```javascript
-await expect(page).toHaveURL(new RegExp(`${DEBENTURE_PATH}$`));
-await expect(page).toHaveTitle(new RegExp(`${DEBENTURE_TICKER}.*ANBIMA Data`, 'i'));
+import { Locator, Page } from '@playwright/test';
+
+export class NavigationComponent {
+  readonly page: Page;
+  readonly nav: Locator;
+  readonly homeLink: Locator;
+  readonly breadcrumb: Locator;
+  
+  constructor(page: Page) {
+    this.page = page;
+    this.nav = page.locator('nav').first();
+    this.homeLink = this.nav.locator('a').filter({ hasText: 'HOME' });
+    this.breadcrumb = this.nav;
+  }
+  
+  async clickHome() {
+    await Promise.all([
+      this.page.waitForURL(new RegExp('/debentures/?$'), { timeout: 30000 }),
+      this.homeLink.click(),
+    ]);
+  }
+  
+  async getBreadcrumbText(): Promise<string | null> {
+    return await this.breadcrumb.textContent();
+  }
+}
+```
+
+### Uso de Component Objects em Page Objects
+
+```javascript
+import { Page } from '@playwright/test';
+import { BasePage } from '../base.page';
+import { NavigationComponent } from '../../components/navigation.component';
+
+export class CaracteristicasPage extends BasePage {
+  readonly navigation: NavigationComponent;
+  readonly mainHeading: Locator;
+  
+  constructor(page: Page) {
+    super(page);
+    this.navigation = new NavigationComponent(page);
+    this.mainHeading = page.locator('h1').first();
+  }
+}
 ```
 
 ## Seletores e Locators
 
 ### Preferência de Seletores
 
-1. **Seletores semânticos**: Use `page.getByRole()` quando possível
-2. **Locators com filtros**: Use `page.locator().filter({ hasText: ... })` para elementos por texto
-3. **IDs específicos**: Use IDs quando disponíveis (ex: `#output__container--vna`)
-4. **Seletores CSS**: Use apenas quando necessário e específico
+1. **Seletores semânticos**: `page.getByRole()` - sempre preferir
+2. **Locators com filtros**: `page.locator().filter({ hasText: ... })`
+3. **IDs específicos**: Use quando disponíveis e estáveis
+4. **Seletores CSS**: Apenas quando necessário e específico
+5. **Data attributes**: Use `data-testid` quando disponível (recomendado para testes)
 
-### Padrões de Locators
+### Padrões de Locators em Page Objects
 
 ```javascript
-// Preferir seletores semânticos
-const button = page.getByRole('button', { name: /Comparar debênture/i });
+// ✅ BOM - Seletores semânticos
+readonly submitButton: Locator = page.getByRole('button', { name: /enviar/i });
 
-// Locators com filtros de texto (case-insensitive)
-const breadcrumb = page.locator('nav').first();
-const homeLink = page.locator('nav a').filter({ hasText: 'HOME' });
+// ✅ BOM - Locators com filtros
+readonly homeLink: Locator = page.locator('nav a').filter({ hasText: 'HOME' });
 
-// IDs específicos quando disponíveis
-const vnaContainer = page.locator('#output__container--vna').first();
+// ✅ BOM - IDs quando estáveis
+readonly vnaContainer: Locator = page.locator('#output__container--vna').first();
 
-// Múltiplos seletores com fallback
-const tooltipIcon = page.locator('#output__container--vna svg').first();
+// ✅ BOM - Data testid (recomendado)
+readonly searchInput: Locator = page.getByTestId('search-input');
+
+// ❌ EVITAR - Seletores CSS frágeis
+readonly badSelector: Locator = page.locator('div > div > div > button');
 ```
 
-### Navegação entre Elementos
+### Boas Práticas de Locators
 
-Use `.locator('..')` para navegar para elementos pais quando necessário:
+- **Sempre use `.first()`** quando o seletor pode retornar múltiplos elementos
+- **Evite seletores muito específicos** que quebram facilmente
+- **Use `getByTestId()`** quando possível (requer adicionar `data-testid` no código)
+- **Documente seletores complexos** com comentários
+
+## Estrutura de Testes
+
+### Organização de Casos de Teste
 
 ```javascript
-const devedorValue = page
-  .locator('dt, term')
-  .filter({ hasText: 'Devedor' })
-  .locator('..')
-  .locator('dd, definition');
+import { test, expect } from '@playwright/test';
+import { CaracteristicasPage } from '../pages/debentures/caracteristicas.page';
+
+const DEBENTURE_TICKER = 'AALM11';
+
+test.describe('TC-001: Carregamento da Página de Características', () => {
+  test('deve carregar a página corretamente sem erros', async ({ page }) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    
+    // Setup interceptors
+    const consoleErrors = await caracteristicasPage.setupConsoleErrorInterceptor();
+    const failedRequests = await caracteristicasPage.setupFailedRequestInterceptor();
+    
+    // Navegação
+    await caracteristicasPage.goto(DEBENTURE_TICKER);
+    
+    // Validações
+    await caracteristicasPage.validateUrl(DEBENTURE_TICKER);
+    await caracteristicasPage.validateTitle(DEBENTURE_TICKER);
+    expect(consoleErrors).toHaveLength(0);
+    caracteristicasPage.validateCriticalRequests(failedRequests);
+  });
+  
+  test('deve exibir informações principais corretamente', async ({ page }) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    await caracteristicasPage.goto(DEBENTURE_TICKER);
+    
+    const devedorValue = await caracteristicasPage.getDevedorValue();
+    expect(devedorValue).toBeTruthy();
+    expect(devedorValue?.trim()).not.toBe('');
+  });
+});
+```
+
+### Constantes e Test Data
+
+```javascript
+// tests/debentures/test-data.js
+export const TEST_DATA = {
+  DEBENTURE_TICKER: 'AALM11',
+  DEBENTURE_PATH: (ticker: string) => `/debentures/${ticker}/caracteristicas`,
+  EXPECTED_TITLE_PATTERN: (ticker: string) => new RegExp(`${ticker}.*ANBIMA Data`, 'i'),
+};
+
+// Uso no teste
+import { TEST_DATA } from '../test-data';
+
+test('exemplo', async ({ page }) => {
+  const page = new CaracteristicasPage(page);
+  await page.goto(TEST_DATA.DEBENTURE_TICKER);
+});
 ```
 
 ## Validações
 
 ### Uso de `expect()` do Playwright
 
-- Use `expect()` do `@playwright/test`, não do Jest
-- Prefira asserções específicas do Playwright (`toBeVisible()`, `toHaveText()`, etc.)
+- **Sempre use** `expect()` do `@playwright/test`
+- **Prefira asserções específicas** do Playwright
+- **Use `await`** em todas as asserções do Playwright
 
 ```javascript
-import { expect, test } from '@playwright/test';
+import { expect } from '@playwright/test';
 
+// ✅ BOM
 await expect(element).toBeVisible();
 await expect(element).toHaveText('Texto esperado');
 await expect(element).toContainText('Texto parcial');
+await expect(page).toHaveURL(/pattern/);
+await expect(page).toHaveTitle(/pattern/);
+
+// ❌ EVITAR - Jest expect
+expect(element).toBeVisible(); // Não funciona com Playwright locators
+```
+
+### Validações em Page Objects
+
+```javascript
+export class CaracteristicasPage extends BasePage {
+  async validatePageLoaded(ticker: string) {
+    await this.validateUrl(ticker);
+    await this.validateTitle(ticker);
+    await expect(this.mainHeading).toBeVisible({ timeout: 10000 });
+  }
+  
+  async validateDevedorValue(expectedPattern: RegExp) {
+    const value = await this.getDevedorValue();
+    expect(value).toMatch(expectedPattern);
+  }
+}
 ```
 
 ### Timeouts
 
-- Especifique timeouts apenas quando necessário (elementos que podem demorar)
-- Use valores razoáveis (5000ms para elementos dinâmicos, 10000ms para carregamento inicial)
+- **Padrão**: 30 segundos (configurado no `playwright.config.js`)
+- **Específicos**: Use apenas quando necessário
+  - `5000ms` para elementos dinâmicos
+  - `10000ms` para carregamento inicial de página
+  - `30000ms` para navegações complexas
 
 ```javascript
-await expect(mainHeading).toBeVisible({ timeout: 10000 });
-await expect(element).toBeVisible({ timeout: 5000 });
-```
-
-### Validações Condicionais
-
-Para elementos que podem ou não estar presentes, use `.catch()` ou verificação condicional:
-
-```javascript
-const errorMessages = page.locator('text=/erro|error|falha|não encontrado/i');
-await expect(errorMessages.first())
-  .not.toBeVisible({ timeout: 1000 })
-  .catch(() => {});
-
-// Ou verificação condicional
-const isVisible = await disclaimer.isVisible().catch(() => false);
-if (isVisible) {
-  // validação adicional
+// No Page Object
+async waitForMainContent() {
+  await expect(this.mainHeading).toBeVisible({ timeout: 10000 });
 }
+
+// No teste - raramente necessário especificar timeout
+await expect(element).toBeVisible(); // Usa timeout padrão
 ```
 
 ## Ações Assíncronas
 
 ### Uso de `Promise.all()`
 
-Use `Promise.all()` para ações que devem acontecer simultaneamente (navegação + clique):
+Use para ações que devem acontecer simultaneamente:
 
 ```javascript
-await Promise.all([
-  page.waitForURL(new RegExp('/debentures/?$'), { timeout: 30000 }),
-  homeLink.click(),
-]);
+// No Page Object
+async clickDocumentosTab() {
+  await Promise.all([
+    this.page.waitForURL(new RegExp('/documentos$'), { timeout: 30000 }),
+    this.documentosTab.click(),
+  ]);
+}
+
+// No Component Object
+async clickHome() {
+  await Promise.all([
+    this.page.waitForURL(new RegExp('/debentures/?$'), { timeout: 30000 }),
+    this.homeLink.click(),
+  ]);
+}
 ```
 
 ### Aguardar Estados
 
-Use `waitForLoadState()` após ações que causam navegação:
-
 ```javascript
-await page.waitForLoadState('networkidle');
+// No Page Object
+async waitForPageLoad() {
+  await this.page.waitForLoadState('networkidle');
+  await expect(this.mainHeading).toBeVisible();
+}
 ```
 
 ## Validações de Texto e Formato
 
-### Regex para Validações
+### Helpers de Validação
 
-Use regex para validar formatos específicos:
+Crie utilitários para validações comuns:
 
 ```javascript
-// CNPJ
-expect(cnpjText).toMatch(/\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/);
+// utils/validators.js
+export const Validators = {
+  cnpj: (text: string) => /\d{2}\.\d{3}\.\d{3}\/\d{4}-\d{2}/.test(text),
+  currency: (text: string) => /R\$\s*[\d.,]+/.test(text),
+  date: (text: string) => /\d{2}\/\d{2}\/\d{4}/.test(text),
+  url: (text: string, pattern: RegExp) => pattern.test(text),
+};
 
-// Valores monetários
-expect(volumeText).toMatch(/R\$\s*[\d.,]+/);
-
-// Datas
-expect(dataText).toMatch(/\d{2}\/\d{2}\/\d{4}/);
-
-// URLs
-expect(href).toMatch(/^https:\/\/data\.cer\.anbima\.cloud\/?$/);
+// Uso no Page Object
+async validateCnpj(cnpjLocator: Locator) {
+  const cnpjText = await cnpjLocator.textContent();
+  expect(cnpjText).toMatch(Validators.cnpj);
+}
 ```
 
 ### Validações de Conteúdo
 
-- Valide que textos não estão vazios: `expect(text.trim()).not.toBe('')`
-- Valide que textos existem: `expect(text).toBeTruthy()`
-- Use `.textContent()` para obter o texto completo
-
 ```javascript
-const text = await element.textContent();
-expect(text).toBeTruthy();
-expect(text?.trim()).not.toBe('');
+// No Page Object
+async getTextContent(locator: Locator): Promise<string> {
+  const text = await locator.textContent();
+  expect(text).toBeTruthy();
+  expect(text?.trim()).not.toBe('');
+  return text!;
+}
 ```
 
 ## Interações com Elementos
 
-### Cliques e Navegação
-
-- Sempre aguarde a navegação após cliques em links
-- Use `Promise.all()` para combinar clique e espera de URL
+### Métodos de Interação em Page Objects
 
 ```javascript
-await Promise.all([
-  page.waitForURL(new RegExp('/documentos$'), { timeout: 30000 }),
-  documentosTab.click(),
-]);
+export class CaracteristicasPage extends BasePage {
+  // Cliques
+  async clickCompareButton() {
+    await this.compareButton.click();
+  }
+  
+  // Navegação entre abas
+  async openDocumentosTab() {
+    await this.clickDocumentosTab();
+    await this.waitForLoadState();
+  }
+  
+  // Hover e tooltips
+  async showTooltip() {
+    await this.hoverTooltip();
+    const isVisible = await this.isTooltipVisible();
+    expect(isVisible).toBe(true);
+  }
+  
+  // Abas e contextos
+  async openCompareInNewTab(expectedUrl: RegExp) {
+    const [newPage] = await Promise.all([
+      this.page.context().waitForEvent('page'),
+      this.compareButton.click(),
+    ]);
+    await newPage.waitForLoadState('networkidle');
+    await expect(newPage).toHaveURL(expectedUrl);
+    return newPage;
+  }
+}
 ```
 
-### Hover e Tooltips
+## Fixtures Customizadas
 
-Para testar tooltips, use hover e aguarde um pequeno delay:
-
-```javascript
-await tooltipIcon.hover();
-await page.waitForTimeout(500);
-const tooltip = page.locator('[role="tooltip"]');
-await expect(tooltip).toBeVisible();
-```
-
-### Abas e Contextos
-
-Para testar abertura de novas abas:
+Crie fixtures para setup comum:
 
 ```javascript
-const [newPage] = await Promise.all([
-  context.waitForEvent('page'),
-  compareButton.click(),
-]);
-await newPage.waitForLoadState('networkidle');
-await expect(newPage).toHaveURL(expectedUrl);
-await newPage.close();
-```
+// fixtures/caracteristicas.fixture.js
+import { test as base } from '@playwright/test';
+import { CaracteristicasPage } from '../pages/debentures/caracteristicas.page';
 
-## Comentários e Documentação
+export const test = base.extend({
+  caracteristicasPage: async ({ page }, use) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    await use(caracteristicasPage);
+  },
+});
 
-### Comentários Explicativos
+// Uso no teste
+import { test, expect } from '../fixtures/caracteristicas.fixture';
 
-- Adicione comentários em português para explicar lógicas complexas
-- Comente seletores específicos quando necessário
-
-```javascript
-// Intercepta erros do console para validação
-const consoleErrors = [];
-
-// Seletor: #output__container--vna > span > span > span > svg
-const tooltipIcon = page.locator('#output__container--vna svg').first();
+test('exemplo', async ({ caracteristicasPage }) => {
+  await caracteristicasPage.goto('AALM11');
+  // ...
+});
 ```
 
 ## Boas Práticas
 
 ### 1. Testes Independentes
 
-- Cada teste deve ser independente e poder rodar isoladamente
-- Não dependa da ordem de execução dos testes
+- Cada teste deve ser independente
+- Use `test.beforeEach()` para setup comum quando necessário
+- Não dependa da ordem de execução
+
+```javascript
+test.describe('Características', () => {
+  test.beforeEach(async ({ page }) => {
+    // Setup comum se necessário
+  });
+  
+  test('teste 1', async ({ page }) => {
+    // Teste independente
+  });
+});
+```
 
 ### 2. Nomes Descritivos
 
-- Use nomes de teste descritivos em português
-- Descreva o comportamento esperado: `'deve exibir título e informações principais corretamente'`
+- Use nomes em português que descrevem o comportamento
+- Seja específico sobre o que está sendo testado
 
-### 3. Validações Específicas
+```javascript
+// ✅ BOM
+test('deve exibir título e informações principais corretamente', ...)
+test('deve navegar para aba de documentos ao clicar na tab', ...)
 
-- Valide comportamentos específicos, não apenas que elementos existem
-- Valide estados, textos, formatos, navegação
+// ❌ EVITAR
+test('teste 1', ...)
+test('características', ...)
+```
 
-### 4. Tratamento de Elementos Opcionais
+### 3. Page Objects Focados
 
-- Use verificações condicionais para elementos que podem não estar presentes
-- Não falhe o teste se elementos opcionais não existirem
+- Um Page Object por página ou seção significativa
+- Métodos devem representar ações do usuário
+- Evite métodos que fazem muitas coisas
+
+```javascript
+// ✅ BOM
+async fillSearchForm(query: string) {
+  await this.searchInput.fill(query);
+  await this.searchButton.click();
+}
+
+// ❌ EVITAR
+async searchAndValidateAndNavigate(query: string) {
+  // Muitas responsabilidades
+}
+```
+
+### 4. Evite Lógica de Negócio nos Testes
+
+- Testes devem ser simples e legíveis
+- Lógica complexa deve estar nos Page Objects ou Utils
+
+```javascript
+// ✅ BOM - no teste
+test('deve calcular valor total', async ({ page }) => {
+  const calculadoraPage = new CalculadoraPage(page);
+  await calculadoraPage.calcularTotal();
+  const total = await calculadoraPage.getTotal();
+  expect(total).toBeGreaterThan(0);
+});
+
+// ❌ EVITAR - lógica no teste
+test('deve calcular valor total', async ({ page }) => {
+  // Lógica complexa de cálculo no teste
+  const items = await page.locator('.item').all();
+  let total = 0;
+  for (const item of items) {
+    // ...
+  }
+});
+```
 
 ### 5. Performance
 
 - Evite `page.waitForTimeout()` desnecessários
 - Use `waitForLoadState()` ou `waitForURL()` quando possível
-- Use timeouts apropriados para não tornar testes lentos
+- Use timeouts apropriados
+
+```javascript
+// ✅ BOM
+await page.waitForLoadState('networkidle');
+await page.waitForURL(/pattern/);
+
+// ❌ EVITAR
+await page.waitForTimeout(5000); // Arbitrário e frágil
+```
 
 ### 6. Manutenibilidade
 
+- Mantenha Page Objects atualizados quando a UI muda
 - Use constantes para valores que podem mudar
-- Organize testes em grupos lógicos com `test.describe()`
-- Mantenha testes focados em um único comportamento
+- Documente métodos complexos
+
+```javascript
+export class CaracteristicasPage extends BasePage {
+  /**
+   * Navega para a página de características de uma debênture
+   * @param ticker - Ticker da debênture (ex: 'AALM11')
+   */
+  async goto(ticker: string) {
+    // Implementação
+  }
+}
+```
 
 ## Exemplo Completo
 
+### Page Object
+
 ```javascript
-import { expect, test } from '@playwright/test';
+// pages/debentures/caracteristicas.page.js
+import { Page, Locator, expect } from '@playwright/test';
+import { BasePage } from '../base.page';
+import { NavigationComponent } from '../../components/navigation.component';
+
+export class CaracteristicasPage extends BasePage {
+  readonly navigation: NavigationComponent;
+  readonly mainHeading: Locator;
+  readonly vnaContainer: Locator;
+  readonly tooltipIcon: Locator;
+  readonly devedorValue: Locator;
+  readonly documentosTab: Locator;
+  
+  constructor(page: Page) {
+    super(page);
+    this.navigation = new NavigationComponent(page);
+    this.mainHeading = page.locator('h1').first();
+    this.vnaContainer = page.locator('#output__container--vna').first();
+    this.tooltipIcon = this.vnaContainer.locator('svg').first();
+    this.devedorValue = page
+      .locator('dt, term')
+      .filter({ hasText: 'Devedor' })
+      .locator('..')
+      .locator('dd, definition');
+    this.documentosTab = page.getByRole('tab', { name: /documentos/i });
+  }
+  
+  async goto(ticker: string) {
+    await super.goto(`/debentures/${ticker}/caracteristicas`);
+    await this.waitForPageLoad();
+  }
+  
+  async waitForPageLoad() {
+    await expect(this.mainHeading).toBeVisible({ timeout: 10000 });
+  }
+  
+  async validatePageLoaded(ticker: string) {
+    await this.validateUrl(ticker);
+    await this.validateTitle(ticker);
+    await this.waitForPageLoad();
+  }
+  
+  async validateUrl(ticker: string) {
+    const expectedPath = `/debentures/${ticker}/caracteristicas`;
+    await expect(this.page).toHaveURL(new RegExp(`${expectedPath}$`));
+  }
+  
+  async validateTitle(ticker: string) {
+    await expect(this.page).toHaveTitle(
+      new RegExp(`${ticker}.*ANBIMA Data`, 'i')
+    );
+  }
+  
+  async clickDocumentosTab() {
+    await Promise.all([
+      this.page.waitForURL(new RegExp('/documentos$'), { timeout: 30000 }),
+      this.documentosTab.click(),
+    ]);
+  }
+  
+  async hoverTooltip() {
+    await this.tooltipIcon.hover();
+    await this.page.waitForTimeout(500);
+  }
+  
+  async getDevedorValue(): Promise<string | null> {
+    return await this.devedorValue.textContent();
+  }
+  
+  async isTooltipVisible(): Promise<boolean> {
+    const tooltip = this.page.locator('[role="tooltip"]');
+    return await tooltip.isVisible().catch(() => false);
+  }
+}
+```
+
+### Teste
+
+```javascript
+// tests/debentures/caracteristicas.spec.js
+import { test, expect } from '@playwright/test';
+import { CaracteristicasPage } from '../../pages/debentures/caracteristicas.page';
 
 const DEBENTURE_TICKER = 'AALM11';
-const DEBENTURE_PATH = `/debentures/${DEBENTURE_TICKER}/caracteristicas`;
 
-test.describe('TC-001: Carregamento da Página', () => {
-  test('deve carregar a página de características corretamente', async ({ page }) => {
-    // Intercepta erros do console para validação
-    const consoleErrors = [];
-    page.on('console', (msg) => {
-      if (msg.type() === 'error') {
-        consoleErrors.push(msg.text());
-      }
-    });
-
-    // Intercepta requisições que falharam
-    const failedRequests = [];
-    page.on('requestfailed', (request) => {
-      failedRequests.push({
-        url: request.url(),
-        failure: request.failure()?.errorText,
-      });
-    });
-
-    await page.goto(DEBENTURE_PATH, { waitUntil: 'networkidle' });
-
-    await expect(page).toHaveURL(new RegExp(`${DEBENTURE_PATH}$`));
-    await expect(page).toHaveTitle(new RegExp(`${DEBENTURE_TICKER}.*ANBIMA Data`, 'i'));
+test.describe('TC-001: Carregamento da Página de Características', () => {
+  test('deve carregar a página corretamente sem erros', async ({ page }) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    
+    // Setup interceptors
+    const consoleErrors = await caracteristicasPage.setupConsoleErrorInterceptor();
+    const failedRequests = await caracteristicasPage.setupFailedRequestInterceptor();
+    
+    // Navegação
+    await caracteristicasPage.goto(DEBENTURE_TICKER);
+    
+    // Validações
+    await caracteristicasPage.validatePageLoaded(DEBENTURE_TICKER);
     expect(consoleErrors).toHaveLength(0);
-
-    const mainHeading = page.locator('h1').filter({ hasText: DEBENTURE_TICKER });
-    await expect(mainHeading).toBeVisible({ timeout: 10000 });
-
-    const criticalFailures = failedRequests.filter(
-      (req) =>
-        !req.url.includes('analytics') && 
-        !req.url.includes('google') && 
-        !req.url.includes('gtag'),
-    );
-    expect(criticalFailures).toHaveLength(0);
+    caracteristicasPage.validateCriticalRequests(failedRequests);
+  });
+  
+  test('deve exibir informações principais corretamente', async ({ page }) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    await caracteristicasPage.goto(DEBENTURE_TICKER);
+    
+    const devedorValue = await caracteristicasPage.getDevedorValue();
+    expect(devedorValue).toBeTruthy();
+    expect(devedorValue?.trim()).not.toBe('');
+  });
+  
+  test('deve navegar para aba de documentos', async ({ page }) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    await caracteristicasPage.goto(DEBENTURE_TICKER);
+    
+    await caracteristicasPage.clickDocumentosTab();
+    await expect(page).toHaveURL(new RegExp('/documentos$'));
+  });
+  
+  test('deve exibir tooltip ao passar mouse sobre ícone', async ({ page }) => {
+    const caracteristicasPage = new CaracteristicasPage(page);
+    await caracteristicasPage.goto(DEBENTURE_TICKER);
+    
+    await caracteristicasPage.hoverTooltip();
+    const isVisible = await caracteristicasPage.isTooltipVisible();
+    expect(isVisible).toBe(true);
   });
 });
 ```
+
+## Resumo de Regras
+
+1. **Sempre use Page Object Model** - Nunca escreva seletores diretamente nos testes
+2. **Um Page Object por página** - Mantenha responsabilidades claras
+3. **Component Objects para elementos reutilizáveis** - Navigation, Header, Footer, etc.
+4. **Métodos representam ações do usuário** - `clickSubmit()`, `fillForm()`, `navigateTo()`
+5. **Locators no construtor** - Inicialize todos os locators no construtor
+6. **Validações em métodos separados** - `validateX()`, `isXVisible()`, `getXValue()`
+7. **Use classe base** - `BasePage` para funcionalidades comuns
+8. **Fixtures para setup comum** - Quando necessário
+9. **Testes focados e legíveis** - Testes devem ler como especificações
+10. **Manutenha Page Objects atualizados** - Quando a UI muda, atualize o Page Object, não os testes
