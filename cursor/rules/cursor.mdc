@@ -13,6 +13,8 @@ Elas estão distribuídas nos documentos abaixo e devem ser interpretadas de for
 - `cursor/rules/kiss.mdc`
 - `cursor/rules/dry.mdc`
 - `cursor/rules/yagni.mdc`
+- `cursor/rules/playwright.mdc`
+- `cursor/rules/conventional-commits.mdc`
 
 Em caso de conflito, prevalece a seguinte ordem:
 1. `cursor/rules/principles.mdc`
